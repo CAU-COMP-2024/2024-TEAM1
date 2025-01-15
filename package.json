@@ -1,9 +1,10 @@
 {
   "name": "2024-team1",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "concurrently \"npm start --prefix client\" \"npm start --prefix server\""
   },
   "keywords": [],
   "author": "",
@@ -14,6 +15,10 @@
     "axios": "^1.7.9",
     "electron": "^34.0.0",
     "html2canvas": "^1.4.1",
-    "tesseract.js": "^6.0.0"
+    "tesseract.js": "^6.0.0",
+    "web-vitals": "^4.2.4"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

@@ -1,23 +1,30 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from "react";
 
 function App() {
+  const [fileContent, setFileContent] = useState("");
+  const [filePath, setFilePath] = useState("");
+
+  const readFile = async () => {
+    try {
+      const content = await window.electronAPI.readFile(filePath);
+      setFileContent(content);
+    } catch (error) {
+      console.error("Error reading file:", error);
+      setFileContent("파일 읽기 오류");
+    }
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <h1>Electron + React 연동</h1>
+      <input
+        type="text"
+        value={filePath}
+        onChange={(e) => setFilePath(e.target.value)}
+        placeholder="파일 경로 입력"
+      />
+      <button onClick={readFile}>파일 읽기</button>
+      <pre>{fileContent}</pre>
     </div>
   );
 }
