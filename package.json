@@ -1,0 +1,19 @@
+{
+  "name": "2024-team1",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@electron/remote": "^2.1.2",
+    "axios": "^1.7.9",
+    "electron": "^34.0.0",
+    "html2canvas": "^1.4.1",
+    "tesseract.js": "^6.0.0"
+  }
+}
