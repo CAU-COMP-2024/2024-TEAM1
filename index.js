@@ -2,53 +2,47 @@
 const express = require('express');
 const multer = require('multer');
 const Tesseract = require('tesseract.js');
-const { Configuration, OpenAIApi } = require('openai');
+const { OpenAI } = require('openai'); // 최신 openai v4.x
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config();
 
 const app = express();
 const port = 3000;
 
-// public 폴더 내 정적 파일 서빙
+/** 디버깅용 콘솔 출력 */
+console.log('Node Version:', process.version);
+console.log('OpenAI Module:', require('openai'));
+console.log('API Key from .env:', process.env.OPENAI_API_KEY);
+
+/** === 1) OpenAI 인스턴스 생성 (v4.x) === */
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+/** === 2) 정적 파일 서빙 === */
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 이미지 업로드를 위한 multer 설정
-// 업로드된 파일은 서버 메모리에 저장 (memoryStorage)
+/** === 3) Multer 설정 === */
 const upload = multer({ storage: multer.memoryStorage() });
 
-// OpenAI 설정
-
-// Configuration 객체 생성
-const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY, // 환경 변수에서 API 키 로드
-  });
-  
-// OpenAIApi 객체 생성
-const openai = new OpenAIApi(configuration);
-
-// OCR + GPT 처리 함수
+/** === 4) OCR + GPT 처리 함수 === */
 async function processImageAndGenerateText(fileBuffer) {
   try {
-    // 1) OCR 처리 (한글+영어 동시 인식)
-    //    kor.traineddata, eng.traineddata 모두 tessdata 폴더에 있어야 함
-    const ocrResult = await Tesseract.recognize(
-      fileBuffer, 
-      'kor+eng',
-      {
-        // tessdata 폴더 경로 설정
-        // (__dirname은 현재 server.js 파일이 있는 디렉토리)
-        langPath: path.join(__dirname, 'tessdata'),
-      }
-    );
+    // 1) OCR 처리
+    const ocrResult = await Tesseract.recognize(fileBuffer, 'kor+eng', {
+      langPath: path.join(__dirname, 'tessdata'),
+    });
 
     const extractedText = ocrResult.data.text.trim();
     console.log('OCR 추출 텍스트:', extractedText);
 
-    // 2) GPT API를 통해 메시지 생성
+    // 2) GPT에 전달할 메시지 구성
     const prompt = `다음 대화 내용을 바탕으로, 상대방에게 보낼 짧고 매력적인 메시지를 1~2줄 정도로 만들어줘:\n\n${extractedText}\n\n`;
 
-    const completion = await openai.createChatCompletion({
-      model: 'gpt-4',
+    // 3) Chat Completion (v4.x)
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
@@ -73,7 +67,7 @@ async function processImageAndGenerateText(fileBuffer) {
       temperature: 0.7,
     });
 
-    const generatedText = completion.data.choices[0].message.content.trim();
+    const generatedText = completion.choices[0].message.content.trim();
     return generatedText;
   } catch (error) {
     console.error(error);
@@ -81,17 +75,14 @@ async function processImageAndGenerateText(fileBuffer) {
   }
 }
 
-// 이미지 업로드 & 처리 엔드포인트
+/** === 5) 이미지 업로드 & 처리 === */
 app.post('/upload', upload.single('screenshot'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: '파일이 업로드되지 않았습니다.' });
     }
 
-    // OCR & GPT 처리
     const resultText = await processImageAndGenerateText(req.file.buffer);
-    
-    // 클라이언트로 결과 전송
     return res.json({ message: resultText });
   } catch (err) {
     console.error(err);
@@ -99,8 +90,8 @@ app.post('/upload', upload.single('screenshot'), async (req, res) => {
   }
 });
 
-// 텍스트 프롬프트 직접 입력 예시 (OCR 생략, GPT만 테스트할 때)
-app.use(express.json()); // JSON 파싱
+/** === 6) 텍스트 프롬프트 입력 예시 (GPT만 테스트) === */
+app.use(express.json());
 app.post('/prompt', async (req, res) => {
   const { userInput } = req.body;
   if (!userInput) {
@@ -108,9 +99,10 @@ app.post('/prompt', async (req, res) => {
   }
 
   try {
-    // GPT API 호출
     const prompt = `대화 상황:\n${userInput}\n\n상대방에게 보낼 매력적인 한 마디를 만들어줘:`;
-    const completion = await openai.createChatCompletion({
+
+    // Chat Completion (v4.x)
+    const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
         {
@@ -136,7 +128,7 @@ app.post('/prompt', async (req, res) => {
       temperature: 0.7,
     });
 
-    const responseText = completion.data.choices[0].message.content.trim();
+    const responseText = completion.choices[0].message.content.trim();
     return res.json({ message: responseText });
   } catch (error) {
     console.error(error);
@@ -144,6 +136,7 @@ app.post('/prompt', async (req, res) => {
   }
 });
 
+/** === 7) 서버 실행 === */
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
